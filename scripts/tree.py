@@ -16,9 +16,11 @@ def path_to_package_and_launch_file(path):
     return package, launch
 
 
-def display_config_tree(config_tree, package="", launch_file="", prefix="", single_line=True):
+def display_config_tree(config_tree, package="", launch_file="", prefix="", single_line=True, print_args=True):
     arg_text = ""
-    launch_text = f"\n{prefix}{package} {launch_file}"
+    launch_text = f"{prefix}{package} {launch_file}"
+    if print_args:
+        launch_text = "\n" + launch_text
 
     subdicts = {}
     if not single_line and package != "":
@@ -31,13 +33,14 @@ def display_config_tree(config_tree, package="", launch_file="", prefix="", sing
         if isinstance(instance, dict):
             subdicts[key] = instance
         if isinstance(instance, LaunchtreeArg):
-            arg = instance
-            if arg.value is not None:
-                pair = f"{arg.name}:={arg.value}"
-                if not single_line:
-                    print(f"{prefix}    {pair}")
-                else:
-                    arg_text += f" {pair}"
+            if print_args:
+                arg = instance
+                if arg.value is not None:
+                    pair = f"{arg.name}:={arg.value}"
+                    if not single_line:
+                        print(f"{prefix}    {pair}")
+                    else:
+                        arg_text += f" {pair}"
     if arg_text != "":
         print(f"{launch_text}{arg_text}")
 
@@ -48,7 +51,7 @@ def display_config_tree(config_tree, package="", launch_file="", prefix="", sing
             filename = key.split(":")[0]
             if filename.endswith(".launch"):
                 package, launch_file = path_to_package_and_launch_file(filename)
-        display_config_tree(instance, package, launch_file, prefix + "  ", single_line)
+        display_config_tree(instance, package, launch_file, prefix + "  ", single_line, print_args)
 
 
 if __name__ == "__main__":
@@ -65,4 +68,4 @@ if __name__ == "__main__":
     loader.load(filename, launch_config, verbose=False, argv=["", "", ""] + launch_args)
     print(f"\n{package} {launch_file} {' '.join(launch_args)}")
     # single_line is ugly but easier to cut and paste into a command line
-    display_config_tree(launch_config.tree, "", "", "  ", single_line=False)
+    display_config_tree(launch_config.tree, "", "", "  ", single_line=False, print_args=True)
