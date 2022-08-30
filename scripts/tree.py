@@ -4,6 +4,7 @@
 import sys
 
 import rospkg
+from rqt_launchtree.launchtree_config import LaunchtreeArg
 from rqt_launchtree.launchtree_config import LaunchtreeConfig
 from rqt_launchtree.launchtree_loader import LaunchtreeLoader
 
@@ -15,20 +16,39 @@ def path_to_package_and_launch_file(path):
     return package, launch
 
 
-def display_config_tree(config_tree, prefix=""):
+def display_config_tree(config_tree, package="", launch_file="", prefix="", single_line=True):
+    arg_text = ""
+    launch_text = f"\n{prefix}{package} {launch_file}"
+
+    subdicts = {}
+    if not single_line and package != "":
+        print(f"{launch_text}")
+
     for key, instance in config_tree.items():
         if key == '_root':
             # print(f"{prefix} {key} {instance}")
             continue
         if isinstance(instance, dict):
-            if ":" in key:
-                filename = key.split(":")[0]
-                if filename.endswith(".launch"):
-                    package, launch = path_to_package_and_launch_file(filename)
-                    # TODO(lucasw) optionally print launch args
-                    print(f"{prefix}{package} {launch}")
-            display_config_tree(instance, prefix + "  ")
-        # if isinstance(instance, roslaunch.core.Node):
+            subdicts[key] = instance
+        if isinstance(instance, LaunchtreeArg):
+            arg = instance
+            if arg.value is not None:
+                pair = f"{arg.name}:={arg.value}"
+                if not single_line:
+                    print(f"{prefix}    {pair}")
+                else:
+                    arg_text += f" {pair}"
+    if arg_text != "":
+        print(f"{launch_text}{arg_text}")
+
+    for key, instance in subdicts.items():
+        package = ""
+        launch_file = ""
+        if ":" in key:
+            filename = key.split(":")[0]
+            if filename.endswith(".launch"):
+                package, launch_file = path_to_package_and_launch_file(filename)
+        display_config_tree(instance, package, launch_file, prefix + "  ", single_line)
 
 
 if __name__ == "__main__":
@@ -43,5 +63,6 @@ if __name__ == "__main__":
     launch_config = LaunchtreeConfig()
     loader = LaunchtreeLoader()
     loader.load(filename, launch_config, verbose=False, argv=["", "", ""] + launch_args)
-    print(f"{package} {launch_file} {' '.join(launch_args)}")
-    display_config_tree(launch_config.tree, "  ")
+    print(f"\n{package} {launch_file} {' '.join(launch_args)}")
+    # single_line is ugly but easier to cut and paste into a command line
+    display_config_tree(launch_config.tree, "", "", "  ", single_line=False)
